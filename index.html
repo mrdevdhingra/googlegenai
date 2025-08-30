@@ -3,105 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Editor</title>
+    <title>Detechly AI</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1><i class="fas fa-magic"></i> AI Image Editor</h1>
-            <p>Upload, edit with AI, and download high-quality images</p>
+            <h1>Detechly AI</h1>
         </header>
 
         <main class="main-content">
-            <!-- Upload Section -->
-            <section class="upload-section" id="uploadSection">
-                <div class="upload-area" id="uploadArea">
-                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                    <h3>Drop your image here</h3>
-                    <p>or click to browse</p>
-                    <input type="file" id="imageInput" accept="image/*" hidden>
+            <!-- Chat Container -->
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Chat messages will be displayed here -->
                 </div>
-                <div class="upload-info">
-                    <p><i class="fas fa-info-circle"></i> Supported formats: JPG, PNG, GIF, WebP (Max: 10MB)</p>
-                </div>
-            </section>
-
-            <!-- Image Preview and Editing Section -->
-            <section class="editor-section" id="editorSection" style="display: none;">
-                <div class="image-container">
-                    <div class="image-preview">
-                        <img id="previewImage" alt="Preview">
-                        <div class="image-overlay">
-                            <div class="image-info" id="imageInfo"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="editing-panel">
-                    <h3><i class="fas fa-edit"></i> AI Image Editing</h3>
-                    
-                    <!-- Edit Instructions -->
-                    <div class="edit-group">
-                        <label for="editInstructions">
-                            <i class="fas fa-wand-magic-sparkles"></i> Describe your edit:
-                        </label>
-                        <textarea 
-                            id="editInstructions" 
-                            placeholder="e.g., Make the sky more dramatic, add a sunset, change the background to a forest, make it black and white..."
-                            rows="3"
-                        ></textarea>
-                    </div>
-
-                    <!-- Quick Edit Options -->
-                    <div class="quick-edits">
-                        <h4>Quick Edits:</h4>
-                        <div class="quick-edit-buttons">
-                            <button class="quick-edit-btn" data-prompt="Make this image more vibrant and colorful">
-                                <i class="fas fa-palette"></i> Enhance Colors
-                            </button>
-                            <button class="quick-edit-btn" data-prompt="Convert this image to black and white with dramatic contrast">
-                                <i class="fas fa-adjust"></i> B&W Dramatic
-                            </button>
-                            <button class="quick-edit-btn" data-prompt="Add a beautiful sunset sky to this image">
-                                <i class="fas fa-sun"></i> Sunset Sky
-                            </button>
-                            <button class="quick-edit-btn" data-prompt="Make this image look like a vintage photograph">
-                                <i class="fas fa-camera-retro"></i> Vintage Style
-                            </button>
-                            <button class="quick-edit-btn" data-prompt="Add artistic painting effects to this image">
-                                <i class="fas fa-paint-brush"></i> Artistic
-                            </button>
-                            <button class="quick-edit-btn" data-prompt="Enhance the lighting and shadows in this image">
-                                <i class="fas fa-lightbulb"></i> Better Lighting
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="action-buttons">
-                        <button id="processBtn" class="btn btn-primary">
-                            <i class="fas fa-magic"></i> Process with AI
-                        </button>
-                        <button id="resetBtn" class="btn btn-secondary">
-                            <i class="fas fa-undo"></i> Reset
-                        </button>
-                        <button id="newImageBtn" class="btn btn-secondary">
-                            <i class="fas fa-plus"></i> New Image
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Results Section -->
-            <section class="results-section" id="resultsSection" style="display: none;">
-                <h3><i class="fas fa-images"></i> AI Generated Results</h3>
-                <div class="results-grid" id="resultsGrid">
-                    <!-- Generated images will be displayed here -->
-                </div>
-            </section>
+            </div>
 
             <!-- Loading Section -->
             <section class="loading-section" id="loadingSection" style="display: none;">
@@ -116,44 +38,63 @@
             </section>
         </main>
 
-        <!-- API Key Modal -->
-        <div class="modal" id="apiKeyModal">
-            <div class="modal-content">
-                <h3><i class="fas fa-key"></i> API Key Required</h3>
-                <p>Please enter your Google Gemini API key to use AI image editing:</p>
-                <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key">
-                <div class="modal-buttons">
-                    <button id="saveApiKey" class="btn btn-primary">Save & Continue</button>
-                    <a href="https://makersuite.google.com/app/apikey" target="_blank" class="btn btn-link">
-                        <i class="fas fa-external-link-alt"></i> Get API Key
-                    </a>
+        <!-- Fixed Input Form -->
+        <div class="input-form-container">
+            <div class="input-form">
+                <!-- API Key Input Row -->
+                <div class="api-key-row" id="apiKeyRow">
+                    <div class="api-key-input-section">
+                        <i class="fas fa-key"></i>
+                        <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key" />
+                        <button id="saveApiKey" class="btn btn-primary">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <a href="https://makersuite.google.com/app/apikey" target="_blank" class="btn btn-link" title="Get API Key">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    <small class="api-key-info">Your API key is stored locally and never sent to our servers.</small>
                 </div>
-                <small>Your API key is stored locally and never sent to our servers.</small>
+
+                <div class="input-row">
+                    <div class="image-input-section">
+                        <label for="imageInput" class="image-input-btn" id="imageInputLabel">
+                            <i class="fas fa-paperclip"></i>
+                            <span id="imageInputText">Attach Image</span>
+                        </label>
+                        <input type="file" id="imageInput" accept="image/*" hidden>
+                        <div class="image-thumbnail-container" id="imageThumbnailContainer" style="display: none;">
+                            <div class="image-thumbnail">
+                                <img id="thumbnailImage" alt="Attached image">
+                                <button class="remove-image-btn" id="removeImageBtn" title="Remove image">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-input-section">
+                        <textarea 
+                            id="editInstructions" 
+                            placeholder="Describe your edit..."
+                            rows="1"
+                        ></textarea>
+                    </div>
+                    <div class="submit-section">
+                        <button id="processBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="input-info">
+                    <span class="format-info">Supported: JPG, PNG, GIF, WebP (Max: 10MB)</span>
+                    <button id="resetBtn" class="reset-link">Reset</button>
+                </div>
             </div>
         </div>
 
-        <!-- Image Preview Modal -->
-        <div class="modal" id="imagePreviewModal" style="display: none;">
-            <div class="image-modal-content">
-                <div class="image-modal-header">
-                    <h3><i class="fas fa-eye"></i> Image Preview</h3>
-                    <button class="close-modal-btn" id="closeImageModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="image-modal-body">
-                    <img id="modalPreviewImage" alt="Full size preview">
-                </div>
-                <div class="image-modal-actions">
-                    <button id="modalDownloadBtn" class="btn btn-primary">
-                        <i class="fas fa-download"></i> Download
-                    </button>
-                    <button id="modalUseBtn" class="btn btn-secondary">
-                        <i class="fas fa-check"></i> Use This Image
-                    </button>
-                </div>
-            </div>
-        </div>
+
+
+
 
         <!-- Toast Notifications -->
         <div class="toast" id="toast">
@@ -163,10 +104,6 @@
             </div>
         </div>
     </div>
-
-    <footer class="footer">
-        <p>&copy; 2024 AI Image Editor. Powered by Google Gemini AI.</p>
-    </footer>
 
     <script src="script.js"></script>
 </body>

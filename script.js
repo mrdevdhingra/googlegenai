@@ -6,37 +6,33 @@ $(document).ready(function() {
     let eventListenersSetup = false;
 
     // DOM elements
-    const $uploadArea = $('#uploadArea');
     const $imageInput = $('#imageInput');
-    const $uploadSection = $('#uploadSection');
-    const $editorSection = $('#editorSection');
-    const $resultsSection = $('#resultsSection');
+    const $chatContainer = $('#chatContainer');
+    const $chatMessages = $('#chatMessages');
     const $loadingSection = $('#loadingSection');
-    const $previewImage = $('#previewImage');
-    const $imageInfo = $('#imageInfo');
     const $editInstructions = $('#editInstructions');
     const $processBtn = $('#processBtn');
     const $resetBtn = $('#resetBtn');
-    const $newImageBtn = $('#newImageBtn');
-    const $resultsGrid = $('#resultsGrid');
-    const $apiKeyModal = $('#apiKeyModal');
+    const $imageInputLabel = $('#imageInputLabel');
+    const $imageInputText = $('#imageInputText');
+    const $imageThumbnailContainer = $('#imageThumbnailContainer');
+    const $thumbnailImage = $('#thumbnailImage');
+    const $removeImageBtn = $('#removeImageBtn');
+    const $apiKeyRow = $('#apiKeyRow');
     const $apiKeyInput = $('#apiKeyInput');
     const $saveApiKey = $('#saveApiKey');
     const $toast = $('#toast');
-    const $imagePreviewModal = $('#imagePreviewModal');
-    const $modalPreviewImage = $('#modalPreviewImage');
-    const $closeImageModal = $('#closeImageModal');
-    const $modalDownloadBtn = $('#modalDownloadBtn');
-    const $modalUseBtn = $('#modalUseBtn');
 
     // Initialize app
     init();
 
     function init() {
         setupEventListeners();
-        if (!apiKey) {
-            showApiKeyModal();
-        }
+        updateApiKeyVisibility();
+        $processBtn.prop('disabled', true);
+        
+        // Auto-resize textarea
+        autoResizeTextarea();
     }
 
     function setupEventListeners() {
@@ -47,92 +43,42 @@ $(document).ready(function() {
         eventListenersSetup = true;
         
         // File upload events
-        $uploadArea.on('click', function(e) {
-            // Prevent infinite recursion by checking if the click came from the input itself
-            if (e.target !== $imageInput[0]) {
-                $imageInput.click();
+        $imageInput.on('change', handleFileSelect);
+        $removeImageBtn.on('click', removeImage);
+        
+        // Edit instructions input with auto-resize
+        $editInstructions.on('input', function() {
+            autoResizeTextarea();
+            updateProcessButtonState();
+        });
+        
+        // Enter key to submit (Shift+Enter for new line)
+        $editInstructions.on('keydown', function(e) {
+            if (e.which === 13 && !e.shiftKey) {
+                e.preventDefault();
+                if (!$processBtn.prop('disabled')) {
+                    processImage();
+                }
             }
         });
-        $imageInput.on('change', handleFileSelect);
-        
-        // Drag and drop events
-        $uploadArea.on('dragover', handleDragOver);
-        $uploadArea.on('dragleave', handleDragLeave);
-        $uploadArea.on('drop', handleDrop);
-        
-        // Quick edit buttons
-        $('.quick-edit-btn').on('click', handleQuickEdit);
         
         // Action buttons
         $processBtn.on('click', processImage);
         $resetBtn.on('click', resetToOriginal);
-        $newImageBtn.on('click', startNew);
         
-        // API key modal
+        // API key input
         $saveApiKey.on('click', saveApiKey);
         $apiKeyInput.on('keypress', function(e) {
             if (e.which === 13) saveApiKey();
         });
         
-        // Image preview modal events
-        $closeImageModal.on('click', hideImagePreviewModal);
-        $imagePreviewModal.on('click', function(e) {
-            // Close modal if clicking on the backdrop (not the content)
-            if (e.target === this) {
-                hideImagePreviewModal();
-            }
-        });
-        $modalDownloadBtn.on('click', function() {
-            const imageData = $modalPreviewImage.attr('src');
-            if (imageData) {
-                downloadImage(imageData, `ai-edited-image-${Date.now()}.png`);
-            }
-        });
-        $modalUseBtn.on('click', function() {
-            const imageData = $modalPreviewImage.attr('src');
-            if (imageData) {
-                $previewImage.attr('src', imageData);
-                hideImagePreviewModal();
-                showSection('editor');
-                showToast('Image updated in editor', 'success');
-            }
-        });
-        
-        // Prevent default drag behaviors on document
-        $(document).on('dragover drop', function(e) {
-            e.preventDefault();
-        });
+
     }
 
     function handleFileSelect(e) {
         const file = e.target.files[0];
         if (file) {
             loadImage(file);
-        }
-    }
-
-    function handleDragOver(e) {
-        e.preventDefault();
-        $uploadArea.addClass('dragover');
-    }
-
-    function handleDragLeave(e) {
-        e.preventDefault();
-        $uploadArea.removeClass('dragover');
-    }
-
-    function handleDrop(e) {
-        e.preventDefault();
-        $uploadArea.removeClass('dragover');
-        
-        const files = e.originalEvent.dataTransfer.files;
-        if (files.length > 0) {
-            const file = files[0];
-            if (file.type.startsWith('image/')) {
-                loadImage(file);
-            } else {
-                showToast('Please drop an image file', 'error');
-            }
         }
     }
 
@@ -156,19 +102,9 @@ $(document).ready(function() {
                 currentImage = file;
                 originalImageData = imageData;
                 
-                // Display image
-                $previewImage.attr('src', imageData);
-                
-                // Update image info
-                const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-                $imageInfo.html(`
-                    <strong>${file.name}</strong><br>
-                    Size: ${sizeInMB}MB<br>
-                    Type: ${file.type}
-                `);
-                
-                // Show editor section
-                showSection('editor');
+                // Update image input state
+                updateImageInputState(true, file.name);
+                updateProcessButtonState();
                 showToast('Image loaded successfully!', 'success');
             } catch (error) {
                 console.error('Error processing image data:', error);
@@ -192,28 +128,14 @@ $(document).ready(function() {
         reader.readAsDataURL(file);
     }
 
-    function handleQuickEdit(e) {
-        const $btn = $(e.currentTarget);
-        const prompt = $btn.data('prompt');
-        
-        // Update active state
-        $('.quick-edit-btn').removeClass('active');
-        $btn.addClass('active');
-        
-        // Set the prompt in textarea
-        $editInstructions.val(prompt);
-        
-        showToast('Quick edit selected', 'info');
-    }
-
     async function processImage() {
         if (!apiKey) {
-            showApiKeyModal();
+            showToast('Please enter your API key first', 'error');
             return;
         }
 
         if (!currentImage) {
-            showToast('Please upload an image first', 'error');
+            showToast('Please attach an image first', 'error');
             return;
         }
 
@@ -224,26 +146,84 @@ $(document).ready(function() {
         }
 
         try {
-            showSection('loading');
-            
             // Convert image to base64
-            const imageBase64 = await fileToBase64(currentImage);
+            const imageBase64 = originalImageData || await fileToBase64(currentImage);
+            
+            // Store current prompt and image for context
+            const currentContext = {
+                prompt: instructions,
+                originalImage: imageBase64
+            };
+            
+            // Show prompt immediately with loading state
+            showPromptWithLoading(instructions, imageBase64);
             
             // Call Gemini API
             const result = await callGeminiAPI(imageBase64, instructions);
             
+            // Remove loading message and replace with actual result
+            removeLoadingMessage();
+            
             if (result.success) {
-                displayResults(result.images);
-                showSection('results');
-                showToast('AI processing completed!', 'success');
+                console.log('Full API response:', result); // Debug log
+                
+                // Check for images more robustly
+                const hasImages = (result.images && result.images.length > 0) || 
+                                 (result.editedImage && result.editedImage.length > 0);
+                
+                // Check for text more robustly  
+                const hasText = (result.text && result.text.trim().length > 0);
+                
+                console.log('Detected hasImages:', hasImages, 'hasText:', hasText); // Debug log
+                
+                // Handle text response first (if any)
+                if (hasText) {
+                    addChatMessage(result.text.trim(), 'ai-text');
+                }
+                
+                // Handle images (if any)
+                if (hasImages) {
+                    // Handle both formats - array of images or single editedImage
+                    const imagesToDisplay = result.images && result.images.length > 0 
+                        ? result.images 
+                        : result.editedImage 
+                            ? [result.editedImage] 
+                            : [];
+                    
+                    if (imagesToDisplay.length > 0) {
+                        displayResults(imagesToDisplay, currentContext);
+                    }
+                } else if (hasText) {
+                    // If only text response, keep the prompt visible and just remove loading
+                    $('.simple-loading').remove();
+                }
+                
+                // Show appropriate toast message
+                if (hasImages && hasText) {
+                    showToast('AI provided both text and images!', 'success');
+                } else if (hasImages) {
+                    showToast('AI processing completed!', 'success');
+                } else if (hasText) {
+                    showToast('AI provided text response', 'info');
+                } else {
+                    showToast('No response received from AI', 'error');
+                    console.log('No images or text detected in result:', result); // Debug log
+                }
+                
+                // Clear input after any successful processing
+                if (hasImages || hasText) {
+                    $editInstructions.val('');
+                    autoResizeTextarea();
+                    updateProcessButtonState();
+                }
             } else {
                 throw new Error(result.error || 'Unknown error occurred');
             }
             
         } catch (error) {
             console.error('Processing error:', error);
+            removeLoadingMessage();
             showToast(`Error: ${error.message}`, 'error');
-            showSection('editor');
         }
     }
 
@@ -284,49 +264,55 @@ $(document).ready(function() {
         }
     }
 
-    function displayResults(images) {
-        $resultsGrid.empty();
-        
+    function displayResults(images, context) {
         if (!images || images.length === 0) {
-            $resultsGrid.html('<p>No images were generated. Please try a different prompt.</p>');
+            showToast('No images were generated. Please try a different prompt.', 'error');
             return;
         }
 
-        images.forEach((imageData, index) => {
-            const $resultItem = $(`
-                <div class="result-item fade-in">
-                    <img src="${imageData}" alt="Generated result ${index + 1}" title="Click to view full size">
-                    <div class="result-actions">
-                        <button class="btn btn-primary download-btn" data-image="${imageData}">
+        // Remove the loading text and replace with image results
+        const $loadingMessage = $('.loading-message');
+        if ($loadingMessage.length > 0) {
+            // Replace loading text with the first image
+            const $loadingText = $loadingMessage.find('.simple-loading');
+            if ($loadingText.length > 0) {
+                const firstImage = images[0];
+                const $imageContainer = $('<div class="message-image"></div>');
+                
+                const $img = $(`<img src="${firstImage}" alt="AI Generated Image" />`);
+                const $actions = $(`
+                    <div class="message-actions">
+                        <button class="btn btn-secondary download-btn" data-image="${firstImage}">
                             <i class="fas fa-download"></i> Download
                         </button>
-                        <button class="btn btn-secondary use-btn" data-image="${imageData}">
-                            <i class="fas fa-check"></i> Use This
-                        </button>
                     </div>
-                </div>
-            `);
-            
-            // Attach event listeners directly to the specific elements
-            $resultItem.find('img').on('click', function() {
-                const imageData = $(this).attr('src');
-                showImagePreviewModal(imageData);
-            });
+                `);
+                
 
-            $resultItem.find('.download-btn').on('click', function() {
-                const imageData = $(this).data('image');
-                downloadImage(imageData, `ai-edited-image-${Date.now()}.png`);
+                
+                $actions.find('.download-btn').on('click', function() {
+                    downloadImage(firstImage, `ai-edited-image-${Date.now()}.png`);
+                });
+                
+                $imageContainer.append($img).append($actions);
+                $loadingText.replaceWith($imageContainer);
+                
+                $loadingMessage.removeClass('loading-message');
+                
+                // Add any additional images as separate messages
+                for (let i = 1; i < images.length; i++) {
+                    addChatMessage(images[i], 'ai', context);
+                }
+            }
+        } else {
+            // Fallback: add all images as separate messages
+            images.forEach((imageData, index) => {
+                addChatMessage(imageData, 'ai', context);
             });
-
-            $resultItem.find('.use-btn').on('click', function() {
-                const imageData = $(this).data('image');
-                $previewImage.attr('src', imageData);
-                showSection('editor');
-                showToast('Image updated in editor', 'success');
-            });
-            
-            $resultsGrid.append($resultItem);
-        });
+        }
+        
+        // Scroll to bottom to show new results
+        scrollToBottom();
     }
 
     function downloadImage(imageData, filename) {
@@ -343,37 +329,30 @@ $(document).ready(function() {
     }
 
     function resetToOriginal() {
-        if (originalImageData) {
-            $previewImage.attr('src', originalImageData);
-            $editInstructions.val('');
-            $('.quick-edit-btn').removeClass('active');
-            showToast('Reset to original image', 'info');
-        }
-    }
-
-    function startNew() {
+        // Clear chat messages
+        $chatMessages.empty();
+        
+        // Reset form state
+        $processBtn.prop('disabled', true);
+        $editInstructions.val('');
         currentImage = null;
         originalImageData = null;
         $imageInput.val('');
-        $editInstructions.val('');
-        $('.quick-edit-btn').removeClass('active');
-        $resultsGrid.empty();
-        showSection('upload');
-        showToast('Ready for new image', 'info');
+        
+        // Reset image input state
+        updateImageInputState(false);
+        autoResizeTextarea();
+        
+        showToast('Reset complete', 'info');
     }
 
     function showSection(section) {
         // Hide all sections
-        $uploadSection.hide();
-        $editorSection.hide();
         $resultsSection.hide();
         $loadingSection.hide();
         
         // Show requested section
         switch (section) {
-            case 'upload':
-                $uploadSection.show().addClass('fade-in');
-                break;
             case 'editor':
                 $editorSection.show().addClass('fade-in');
                 break;
@@ -387,26 +366,15 @@ $(document).ready(function() {
         }
     }
 
-    function showApiKeyModal() {
-        $apiKeyModal.show().addClass('fade-in');
+    function updateApiKeyVisibility() {
+        if (apiKey) {
+            $apiKeyRow.hide();
+        } else {
+            $apiKeyRow.show();
+        }
     }
 
-    function hideApiKeyModal() {
-        $apiKeyModal.hide();
-    }
 
-    function showImagePreviewModal(imageData) {
-        $modalPreviewImage.attr('src', imageData);
-        $imagePreviewModal.show().addClass('fade-in');
-        // Prevent body scrolling when modal is open
-        $('body').css('overflow', 'hidden');
-    }
-
-    function hideImagePreviewModal() {
-        $imagePreviewModal.hide().removeClass('fade-in');
-        // Restore body scrolling
-        $('body').css('overflow', '');
-    }
 
     function saveApiKey() {
         const key = $apiKeyInput.val().trim();
@@ -423,7 +391,7 @@ $(document).ready(function() {
 
         apiKey = key;
         localStorage.setItem('gemini_api_key', key);
-        hideApiKeyModal();
+        updateApiKeyVisibility();
         showToast('API key saved successfully!', 'success');
     }
 
@@ -489,18 +457,138 @@ $(document).ready(function() {
             }
         }
         
-        // Escape to close modal
-        if (e.which === 27) {
-            if ($imagePreviewModal.is(':visible')) {
-                hideImagePreviewModal();
-            } else if ($apiKeyModal.is(':visible')) {
-                // Don't close if no API key is set
-                if (apiKey) {
-                    hideApiKeyModal();
-                }
-            }
-        }
+
     });
+
+    // New helper functions for chat interface
+    function addChatMessage(content, type, context) {
+        const $message = $('<div class="chat-message"></div>');
+        
+        if (type === 'user') {
+            // User prompt message
+            const $prompt = $(`<div class="message-prompt">${content}</div>`);
+            $message.append($prompt);
+        } else if (type === 'ai') {
+            // AI generated image with context
+            const $imageContainer = $('<div class="message-image"></div>');
+            
+            // Add context prompt with thumbnail if provided
+            if (context && context.prompt && context.originalImage) {
+                const $contextPrompt = $(`
+                    <div class="message-prompt-with-thumbnail">
+                        <img src="${context.originalImage}" alt="Original image" class="prompt-thumbnail" />
+                        <span class="prompt-text">${context.prompt}</span>
+                    </div>
+                `);
+                $message.append($contextPrompt);
+            }
+            
+            const $img = $(`<img src="${content}" alt="AI Generated Image" />`);
+            const $actions = $(`
+                <div class="message-actions">
+                    <button class="btn btn-secondary download-btn" data-image="${content}">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                </div>
+            `);
+            
+
+            
+            $actions.find('.download-btn').on('click', function() {
+                downloadImage(content, `ai-edited-image-${Date.now()}.png`);
+            });
+            
+            $imageContainer.append($img).append($actions);
+            $message.append($imageContainer);
+        } else if (type === 'error') {
+            // Error message
+            const $error = $(`<div class="message-prompt" style="color: #ef4444;">${content}</div>`);
+            $message.append($error);
+        } else if (type === 'text') {
+            // Generic text message
+            const $text = $(`<div class="message-prompt" style="color: #a1a1aa; font-weight: 500;">${content}</div>`);
+            $message.append($text);
+        } else if (type === 'ai-text') {
+            // AI text response (questions, clarifications, explanations)
+            const $aiText = $(`<div class="ai-text-response">${content}</div>`);
+            $message.append($aiText);
+        }
+        
+        $chatMessages.append($message);
+        scrollToBottom();
+    }
+    
+    function showPromptWithLoading(prompt, imageBase64) {
+        const $message = $('<div class="chat-message loading-message"></div>');
+        
+        // Add prompt with thumbnail immediately
+        const $contextPrompt = $(`
+            <div class="message-prompt-with-thumbnail">
+                <img src="${imageBase64}" alt="Original image" class="prompt-thumbnail" />
+                <span class="prompt-text">${prompt}</span>
+            </div>
+        `);
+        $message.append($contextPrompt);
+        
+        // Add simple loading text with animated dots
+        const $loadingText = $(`
+            <div class="simple-loading">loading</div>
+        `);
+        $message.append($loadingText);
+        
+        $chatMessages.append($message);
+        scrollToBottom();
+    }
+    
+    function removeLoadingMessage() {
+        $('.loading-message').remove();
+    }
+    
+    function updateImageInputState(hasImage, filename) {
+        if (hasImage) {
+            $imageInputLabel.addClass('has-image').hide();
+            
+            // Show thumbnail if we have image data
+            if (originalImageData) {
+                $thumbnailImage.attr('src', originalImageData);
+                $imageThumbnailContainer.show();
+            }
+        } else {
+            $imageInputLabel.removeClass('has-image').show();
+            $imageInputText.text('Attach Image');
+            $imageThumbnailContainer.hide();
+            $thumbnailImage.attr('src', '');
+        }
+    }
+    
+    function removeImage() {
+        currentImage = null;
+        originalImageData = null;
+        $imageInput.val('');
+        updateImageInputState(false);
+        updateProcessButtonState();
+        showToast('Image removed', 'info');
+    }
+    
+    function updateProcessButtonState() {
+        const hasImage = currentImage || originalImageData;
+        const hasText = $editInstructions.val().trim().length > 0;
+        $processBtn.prop('disabled', !(hasImage && hasText));
+    }
+    
+    function autoResizeTextarea() {
+        const textarea = $editInstructions[0];
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+    
+    function scrollToBottom() {
+        setTimeout(() => {
+            $chatContainer.animate({
+                scrollTop: $chatContainer[0].scrollHeight
+            }, 300);
+        }, 100);
+    }
 
     // Initialize tooltips and animations
     setTimeout(() => {

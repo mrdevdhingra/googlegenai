@@ -56,7 +56,7 @@ module.exports = async function handler(req, res) {
 
         // Configuration for image generation (matching server.js)
         const config = {
-            responseModalities: ['IMAGE', 'TEXT']
+            responseModalities: ['IMAGE', 'TEXT']  // Allow both images and text responses
         };
 
         const model = 'gemini-2.5-flash-image-preview';
@@ -80,7 +80,7 @@ module.exports = async function handler(req, res) {
                         text: `Please edit this image according to these instructions: ${instructions}. 
                                Generate a high-quality edited version of this image. 
                                Maintain the original image quality and dimensions as much as possible.
-                               Focus on making realistic and natural-looking edits.`
+                               Focus on making realistic and natural-looking edits. Return only the edited image, no text.`
                     }
                 ]
             }
@@ -121,27 +121,20 @@ module.exports = async function handler(req, res) {
         }
 
         console.log(`Generated ${generatedImages.length} images`);
+        console.log(`Text response: ${textResponse}`);
 
-        if (generatedImages.length === 0) {
-            return res.status(200).json({
-                success: true,
-                images: [],
-                text: textResponse,
-                message: 'No images were generated. The AI provided text feedback instead.',
-                debugInfo: {
-                    textResponse: textResponse,
-                    instructions: instructions
-                }
-            });
-        }
-
-        // Return the first generated image in the expected format
+        // Always return success with whatever we got - images, text, or both
         res.json({
             success: true,
-            editedImage: generatedImages[0], // Match the expected response format
             images: generatedImages,
-            text: textResponse,
-            message: 'Image edited successfully!'
+            text: textResponse.trim(),
+            hasImages: generatedImages.length > 0,
+            hasText: textResponse.trim().length > 0,
+            message: generatedImages.length > 0 
+                ? 'Processing completed with images!' 
+                : textResponse.trim().length > 0 
+                    ? 'AI provided text response'
+                    : 'No response received'
         });
 
     } catch (error) {

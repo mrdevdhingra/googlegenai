@@ -69,3 +69,4 @@ temp/
 # Generated files
 dist/
 build/
+.vercel

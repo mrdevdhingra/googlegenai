@@ -1,6 +1,3 @@
-const { GoogleGenAI } = require('@google/genai');
-const mime = require('mime');
-
 export default async function handler(req, res) {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -26,6 +23,9 @@ export default async function handler(req, res) {
     }
 
     try {
+        // Dynamic import for ES modules in serverless function
+        const { GoogleGenAI } = await import('@google/genai');
+        
         const { apiKey, imageData, instructions } = req.body;
 
         if (!apiKey) {

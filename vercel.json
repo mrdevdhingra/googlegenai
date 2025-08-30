@@ -16,5 +16,8 @@
     "api/*.js": {
       "maxDuration": 30
     }
+  },
+  "github": {
+    "silent": true
   }
 }

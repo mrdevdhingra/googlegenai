@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -23,8 +23,8 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Dynamic import for ES modules in serverless function
-        const { GoogleGenAI } = await import('@google/genai');
+        // Import GoogleGenAI using require for better Vercel compatibility
+        const { GoogleGenAI } = require('@google/genai');
         
         const { apiKey, imageData, instructions } = req.body;
 
@@ -152,4 +152,4 @@ Please edit the image now.`;
             details: error.message
         });
     }
-}
+};

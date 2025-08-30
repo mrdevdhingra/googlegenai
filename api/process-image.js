@@ -23,8 +23,8 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        // Import GoogleGenerativeAI using require for better Vercel compatibility
-        const { GoogleGenerativeAI } = require('@google/generative-ai');
+        // Import GoogleGenAI using the old package that works (matching server.js)
+        const { GoogleGenAI } = require('@google/genai');
         
         const { apiKey, imageData, instructions } = req.body;
 
@@ -49,132 +49,127 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        // Initialize Gemini AI
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+        // Initialize Gemini AI (matching server.js)
+        const genAI = new GoogleGenAI({
+            apiKey: apiKey
+        });
 
-        // Convert base64 to buffer and get mime type
-        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-        
-        // Detect mime type from original data URL
-        const mimeMatch = imageData.match(/^data:image\/(\w+);base64,/);
-        const detectedMimeType = mimeMatch ? `image/${mimeMatch[1]}` : 'image/jpeg';
-
-        const imagePart = {
-            inlineData: {
-                data: base64Data,
-                mimeType: detectedMimeType
-            }
+        // Configuration for image generation (matching server.js)
+        const config = {
+            responseModalities: ['IMAGE', 'TEXT']
         };
 
-        // Create the prompt for image editing
-        const prompt = `You are an expert image editor. Please edit this image according to these instructions: "${instructions}". 
+        const model = 'gemini-2.5-flash-image-preview';
 
-Important guidelines:
-- Maintain the original image quality and resolution
-- Make realistic and natural-looking edits
-- Preserve important details while making the requested changes
-- If the instruction is unclear, make the best interpretation
-- Return only the edited image
+        // Extract base64 data from data URL (matching server.js)
+        const base64Data = imageData.split(',')[1];
+        const mimeType = imageData.split(';')[0].split(':')[1];
 
-Please edit the image now.`;
-
-        console.log('Processing image with Gemini...');
-        console.log('Instructions:', instructions);
-        console.log('Image mime type:', detectedMimeType);
-
-        // Generate content with image
-        const result = await model.generateContent([prompt, imagePart]);
-        const response = await result.response;
-        
-        // Log the full response for debugging
-        console.log('Full AI Response:', JSON.stringify({
-            candidates: response.candidates?.length || 0,
-            candidateStructure: response.candidates?.[0] ? Object.keys(response.candidates[0]) : [],
-            contentStructure: response.candidates?.[0]?.content ? Object.keys(response.candidates[0].content) : [],
-            partsLength: response.candidates?.[0]?.content?.parts?.length || 0,
-            firstPartKeys: response.candidates?.[0]?.content?.parts?.[0] ? Object.keys(response.candidates[0].content.parts[0]) : []
-        }, null, 2));
-        
-        // Check if we got image data back
-        if (response.candidates && response.candidates[0] && response.candidates[0].content) {
-            const content = response.candidates[0].content;
-            
-            // Look for inline data in the response
-            if (content.parts && content.parts[0] && content.parts[0].inlineData) {
-                const editedImageData = content.parts[0].inlineData.data;
-                const editedMimeType = content.parts[0].inlineData.mimeType || 'image/png';
-                
-                return res.json({
-                    success: true,
-                    editedImage: `data:${editedMimeType};base64,${editedImageData}`,
-                    message: 'Image edited successfully!'
-                });
-            }
-            
-            // If no image data, check for text response
-            if (content.parts && content.parts[0] && content.parts[0].text) {
-                console.log('AI returned text response:', content.parts[0].text);
-                return res.status(400).json({
-                    success: false,
-                    error: 'AI returned text instead of edited image. Try rephrasing your request or use a different image.',
-                    details: content.parts[0].text,
-                    debugInfo: {
-                        responseStructure: JSON.stringify(response.candidates[0], null, 2)
+        // Prepare the content for the API (matching server.js)
+        const contents = [
+            {
+                role: 'user',
+                parts: [
+                    {
+                        inlineData: {
+                            mimeType: mimeType,
+                            data: base64Data
+                        }
+                    },
+                    {
+                        text: `Please edit this image according to these instructions: ${instructions}. 
+                               Generate a high-quality edited version of this image. 
+                               Maintain the original image quality and dimensions as much as possible.
+                               Focus on making realistic and natural-looking edits.`
                     }
-                });
+                ]
+            }
+        ];
+
+        console.log('Processing image with Gemini AI...');
+
+        // Generate content stream (matching server.js)
+        const response = await genAI.models.generateContentStream({
+            model,
+            config,
+            contents
+        });
+
+        const generatedImages = [];
+        let textResponse = '';
+
+        // Process the stream (matching server.js)
+        for await (const chunk of response) {
+            if (!chunk.candidates || !chunk.candidates[0] || !chunk.candidates[0].content) {
+                continue;
+            }
+
+            const parts = chunk.candidates[0].content.parts;
+            if (!parts) continue;
+
+            for (const part of parts) {
+                if (part.inlineData) {
+                    // Handle generated image
+                    const { mimeType: generatedMimeType, data: generatedData } = part.inlineData;
+                    const imageDataUrl = `data:${generatedMimeType};base64,${generatedData}`;
+                    generatedImages.push(imageDataUrl);
+                } else if (part.text) {
+                    // Handle text response
+                    textResponse += part.text;
+                }
             }
         }
 
-        // If we get here, something went wrong - provide detailed debug info
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to process image. The AI did not return an edited image.',
-            details: 'No image data found in AI response',
-            debugInfo: {
-                hasCandidates: !!response.candidates,
-                candidatesLength: response.candidates?.length || 0,
-                firstCandidateKeys: response.candidates?.[0] ? Object.keys(response.candidates[0]) : [],
-                hasContent: !!response.candidates?.[0]?.content,
-                contentKeys: response.candidates?.[0]?.content ? Object.keys(response.candidates[0].content) : [],
-                hasParts: !!response.candidates?.[0]?.content?.parts,
-                partsLength: response.candidates?.[0]?.content?.parts?.length || 0,
-                firstPartType: response.candidates?.[0]?.content?.parts?.[0] ? typeof response.candidates[0].content.parts[0] : 'undefined',
-                firstPartKeys: response.candidates?.[0]?.content?.parts?.[0] ? Object.keys(response.candidates[0].content.parts[0]) : [],
-                fullResponse: JSON.stringify(response, null, 2)
-            }
+        console.log(`Generated ${generatedImages.length} images`);
+
+        if (generatedImages.length === 0) {
+            return res.status(200).json({
+                success: true,
+                images: [],
+                text: textResponse,
+                message: 'No images were generated. The AI provided text feedback instead.',
+                debugInfo: {
+                    textResponse: textResponse,
+                    instructions: instructions
+                }
+            });
+        }
+
+        // Return the first generated image in the expected format
+        res.json({
+            success: true,
+            editedImage: generatedImages[0], // Match the expected response format
+            images: generatedImages,
+            text: textResponse,
+            message: 'Image edited successfully!'
         });
 
     } catch (error) {
         console.error('Error processing image:', error);
         
-        // Handle specific API errors
+        // Handle specific API errors (matching server.js)
+        let errorMessage = 'An error occurred while processing the image';
+        
         if (error.message && error.message.includes('API key')) {
-            return res.status(401).json({
-                success: false,
-                error: 'Invalid API key. Please check your Gemini API key.'
-            });
-        }
-        
-        if (error.message && error.message.includes('quota')) {
-            return res.status(429).json({
-                success: false,
-                error: 'API quota exceeded. Please check your Gemini API usage limits.'
-            });
-        }
-        
-        if (error.message && error.message.includes('SAFETY')) {
-            return res.status(400).json({
-                success: false,
-                error: 'Content blocked by safety filters. Please try a different image or instruction.'
-            });
+            errorMessage = 'Invalid API key. Please check your Gemini API key.';
+        } else if (error.message && error.message.includes('quota')) {
+            errorMessage = 'API quota exceeded. Please check your Gemini API usage.';
+        } else if (error.message && error.message.includes('permission')) {
+            errorMessage = 'Permission denied. Please check your API key permissions.';
+        } else if (error.message && error.message.includes('model')) {
+            errorMessage = 'Model not available. Please try again later.';
+        } else if (error.message && error.message.includes('SAFETY')) {
+            errorMessage = 'Content blocked by safety filters. Please try a different image or instruction.';
         }
 
         return res.status(500).json({
             success: false,
-            error: 'Failed to process image with AI',
-            details: error.message
+            error: errorMessage,
+            details: error.message,
+            debugInfo: {
+                originalError: error.toString(),
+                stack: error.stack
+            }
         });
     }
 };

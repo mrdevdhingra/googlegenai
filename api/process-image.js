@@ -88,6 +88,15 @@ Please edit the image now.`;
         const result = await model.generateContent([prompt, imagePart]);
         const response = await result.response;
         
+        // Log the full response for debugging
+        console.log('Full AI Response:', JSON.stringify({
+            candidates: response.candidates?.length || 0,
+            candidateStructure: response.candidates?.[0] ? Object.keys(response.candidates[0]) : [],
+            contentStructure: response.candidates?.[0]?.content ? Object.keys(response.candidates[0].content) : [],
+            partsLength: response.candidates?.[0]?.content?.parts?.length || 0,
+            firstPartKeys: response.candidates?.[0]?.content?.parts?.[0] ? Object.keys(response.candidates[0].content.parts[0]) : []
+        }, null, 2));
+        
         // Check if we got image data back
         if (response.candidates && response.candidates[0] && response.candidates[0].content) {
             const content = response.candidates[0].content;
@@ -106,19 +115,35 @@ Please edit the image now.`;
             
             // If no image data, check for text response
             if (content.parts && content.parts[0] && content.parts[0].text) {
+                console.log('AI returned text response:', content.parts[0].text);
                 return res.status(400).json({
                     success: false,
                     error: 'AI returned text instead of edited image. Try rephrasing your request or use a different image.',
-                    details: content.parts[0].text
+                    details: content.parts[0].text,
+                    debugInfo: {
+                        responseStructure: JSON.stringify(response.candidates[0], null, 2)
+                    }
                 });
             }
         }
 
-        // If we get here, something went wrong
+        // If we get here, something went wrong - provide detailed debug info
         return res.status(500).json({
             success: false,
             error: 'Failed to process image. The AI did not return an edited image.',
-            details: 'No image data found in AI response'
+            details: 'No image data found in AI response',
+            debugInfo: {
+                hasCandidates: !!response.candidates,
+                candidatesLength: response.candidates?.length || 0,
+                firstCandidateKeys: response.candidates?.[0] ? Object.keys(response.candidates[0]) : [],
+                hasContent: !!response.candidates?.[0]?.content,
+                contentKeys: response.candidates?.[0]?.content ? Object.keys(response.candidates[0].content) : [],
+                hasParts: !!response.candidates?.[0]?.content?.parts,
+                partsLength: response.candidates?.[0]?.content?.parts?.length || 0,
+                firstPartType: response.candidates?.[0]?.content?.parts?.[0] ? typeof response.candidates[0].content.parts[0] : 'undefined',
+                firstPartKeys: response.candidates?.[0]?.content?.parts?.[0] ? Object.keys(response.candidates[0].content.parts[0]) : [],
+                fullResponse: JSON.stringify(response, null, 2)
+            }
         });
 
     } catch (error) {

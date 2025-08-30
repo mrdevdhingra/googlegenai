@@ -5,6 +5,12 @@
     box-sizing: border-box;
 }
 
+/* Ensure all images are responsive by default */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     background: #0f0f0f;
@@ -91,6 +97,7 @@ body {
 .message-image {
     align-self: flex-start;
     max-width: 100%;
+    overflow: hidden; /* Prevent any overflow */
 }
 
 .message-image img {
@@ -256,6 +263,8 @@ body {
 
 .image-container {
     position: relative;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .image-preview {
@@ -718,6 +727,8 @@ body {
     
     .main-content {
         padding: 1.5rem;
+        padding-bottom: 220px; /* Increased padding for mobile */
+        min-height: calc(100vh - 220px); /* Ensure minimum height */
     }
     
     .editor-section {
@@ -760,6 +771,25 @@ body {
     .toast.show {
         transform: translateY(0);
     }
+    
+    /* Mobile input form adjustments */
+    .input-form-container {
+        padding: 15px;
+        background: linear-gradient(to top, #0f0f0f 80%, rgba(15, 15, 15, 0.98) 95%, transparent 100%);
+    }
+    
+    .input-form {
+        gap: 0.5rem;
+    }
+    
+    .input-row {
+        padding: 0.625rem;
+        gap: 0.5rem;
+    }
+    
+    .api-key-row {
+        padding: 0.75rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -780,6 +810,83 @@ body {
     
     .results-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .main-content {
+        padding-bottom: 240px; /* Extra padding for very small screens */
+    }
+    
+    .input-form-container {
+        padding: 10px;
+    }
+    
+    .container {
+        padding: 5px;
+    }
+    
+    /* Extra constraints for very small screens */
+    .message-image img {
+        max-width: calc(100vw - 20px); /* Less padding on very small screens */
+    }
+    
+    .image-preview img {
+        max-width: calc(100vw - 20px);
+    }
+    
+    .input-thumbnail img,
+    .image-thumbnail img {
+        max-width: 60px; /* Ensure thumbnails don't overflow */
+    }
+}
+
+/* Mobile viewport handling */
+@supports (-webkit-touch-callout: none) {
+    /* iOS Safari specific handling */
+    .main-content {
+        padding-bottom: max(180px, env(keyboard-inset-height, 180px));
+    }
+    
+    @media (max-width: 768px) {
+        .main-content {
+            padding-bottom: max(220px, env(keyboard-inset-height, 220px));
+            min-height: calc(100vh - max(220px, env(keyboard-inset-height, 220px)));
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .main-content {
+            padding-bottom: max(240px, env(keyboard-inset-height, 240px));
+        }
+    }
+}
+
+/* Ensure content is scrollable on mobile */
+@media (max-width: 768px) {
+    .chat-messages {
+        padding-bottom: 1rem;
+    }
+    
+    .chat-container {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Ensure images stay within viewport on mobile */
+    .message-image img {
+        max-width: calc(100vw - 40px); /* Account for container padding */
+        width: 100%;
+        height: auto;
+    }
+    
+    .image-preview img {
+        max-width: calc(100vw - 40px);
+        width: 100%;
+        height: auto;
+    }
+    
+    .result-item img {
+        width: 100%;
+        max-width: 100%;
     }
 }
 
@@ -872,6 +979,8 @@ body {
     right: 0;
     padding: 20px;
     z-index: 100;
+    background: linear-gradient(to top, #0f0f0f 70%, rgba(15, 15, 15, 0.95) 90%, transparent 100%);
+    backdrop-filter: blur(10px);
 }
 
 .input-form {

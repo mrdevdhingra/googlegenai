@@ -102,6 +102,37 @@ NODE_ENV=development             # Environment mode
 npm run dev  # Uses nodemon for auto-restart
 ```
 
+## Deployment
+
+### Deploy to Vercel (Recommended)
+
+This project is configured for easy deployment on Vercel with serverless functions.
+
+#### Option 1: Vercel CLI
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy
+vercel
+```
+
+#### Option 2: Vercel Dashboard
+1. Visit [vercel.com](https://vercel.com) and login with GitHub
+2. Click "Import Project" 
+3. Select your `googlegenai` repository
+4. Vercel will auto-detect configuration and deploy
+
+#### Deployment Features
+- ✅ Serverless functions for API endpoints
+- ✅ Automatic HTTPS certificates
+- ✅ Auto-deploy on git push
+- ✅ Global CDN for static assets
+- ✅ Zero configuration required
+
 ## Troubleshooting
 
 ### Common Issues
@@ -130,6 +161,12 @@ npm run dev  # Uses nodemon for auto-restart
 - Try more specific instructions
 - Use higher quality input images
 - Experiment with different prompts
+
+**Vercel Deployment Issues**
+- Ensure all dependencies are in package.json
+- Check function timeout limits (30s max on free tier)
+- Verify API endpoints return within time limits
+- Check Vercel function logs for errors
 
 ### Performance Tips
 - Use images under 5MB for faster processing

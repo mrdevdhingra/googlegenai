@@ -1073,6 +1073,69 @@ body {
     flex-shrink: 0;
 }
 
+/* Image input toggle */
+.image-input-toggle {
+    display: flex;
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 0.75rem;
+    border: 1px solid #2a2a2a;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.toggle-btn:hover {
+    color: #ffffff;
+    background: #2a2a2a;
+}
+
+.toggle-btn.active {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+/* URL input mode */
+.url-input-container {
+    width: 100%;
+}
+
+#imageUrlInput {
+    width: 100%;
+    padding: 0.75rem;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+#imageUrlInput:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+#imageUrlInput::placeholder {
+    color: #6b7280;
+}
+
 .image-input-btn {
     display: flex;
     align-items: center;

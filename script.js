@@ -22,6 +22,13 @@ $(document).ready(function() {
     const $apiKeyInput = $('#apiKeyInput');
     const $saveApiKey = $('#saveApiKey');
     const $toast = $('#toast');
+    
+    // New URL input elements
+    const $fileToggleBtn = $('#fileToggleBtn');
+    const $urlToggleBtn = $('#urlToggleBtn');
+    const $fileInputMode = $('#fileInputMode');
+    const $urlInputMode = $('#urlInputMode');
+    const $imageUrlInput = $('#imageUrlInput');
 
     // Initialize app
     init();
@@ -45,6 +52,21 @@ $(document).ready(function() {
         // File upload events
         $imageInput.on('change', handleFileSelect);
         $removeImageBtn.on('click', removeImage);
+        
+        // Toggle events
+        $fileToggleBtn.on('click', () => toggleInputMode('file'));
+        $urlToggleBtn.on('click', () => toggleInputMode('url'));
+        
+        // URL input events - auto-load on input/paste
+        $imageUrlInput.on('input paste', function() {
+            // Use setTimeout to ensure the pasted content is available
+            setTimeout(() => {
+                const url = $(this).val().trim();
+                if (url && isValidImageUrl(url)) {
+                    loadImageFromUrl();
+                }
+            }, 100);
+        });
         
         // Edit instructions input with auto-resize
         $editInstructions.on('input', function() {
@@ -126,6 +148,112 @@ $(document).ready(function() {
         };
         
         reader.readAsDataURL(file);
+    }
+
+    function toggleInputMode(mode) {
+        if (mode === 'file') {
+            $fileToggleBtn.addClass('active');
+            $urlToggleBtn.removeClass('active');
+            $fileInputMode.show();
+            $urlInputMode.hide();
+        } else if (mode === 'url') {
+            $urlToggleBtn.addClass('active');
+            $fileToggleBtn.removeClass('active');
+            $fileInputMode.hide();
+            $urlInputMode.show();
+        }
+    }
+
+    function loadImageFromUrl() {
+        const url = $imageUrlInput.val().trim();
+        if (!url) {
+            return;
+        }
+
+        // Basic URL validation
+        if (!isValidImageUrl(url)) {
+            showToast('Please enter a valid image URL', 'error');
+            return;
+        }
+
+        // Show loading state in the input
+        $imageUrlInput.prop('disabled', true);
+        $imageUrlInput.val('Loading image...');
+        
+        // Create an image element to test if URL is valid and accessible
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = function() {
+            try {
+                // Create canvas to convert image to base64
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                const imageData = canvas.toDataURL('image/png');
+                
+                // Create a mock file object for compatibility
+                currentImage = {
+                    name: getFilenameFromUrl(url) || 'image-from-url.png',
+                    size: imageData.length,
+                    type: 'image/png',
+                    isFromUrl: true,
+                    originalUrl: url
+                };
+                originalImageData = imageData;
+                
+                // Update UI
+                updateImageInputState(true, currentImage.name);
+                updateProcessButtonState();
+                showToast('Image loaded from URL successfully!', 'success');
+                
+                // Clear URL input
+                $imageUrlInput.val('').prop('disabled', false);
+                
+            } catch (error) {
+                console.error('Error processing image from URL:', error);
+                showToast('Error processing image from URL', 'error');
+                $imageUrlInput.val(url).prop('disabled', false);
+            }
+        };
+        
+        img.onerror = function() {
+            showToast('Failed to load image from URL. Please check the URL and try again.', 'error');
+            $imageUrlInput.val(url).prop('disabled', false);
+        };
+        
+        img.src = url;
+    }
+
+    function isValidImageUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            // Check if it's http or https
+            if (!['http:', 'https:'].includes(urlObj.protocol)) {
+                return false;
+            }
+            // Basic check for image extensions
+            const pathname = urlObj.pathname.toLowerCase();
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+            return imageExtensions.some(ext => pathname.includes(ext)) || pathname === '' || !pathname.includes('.');
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function getFilenameFromUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            const pathname = urlObj.pathname;
+            const filename = pathname.split('/').pop();
+            return filename && filename.includes('.') ? filename : null;
+        } catch (e) {
+            return null;
+        }
     }
 
     async function processImage() {
@@ -338,6 +466,10 @@ $(document).ready(function() {
         currentImage = null;
         originalImageData = null;
         $imageInput.val('');
+        $imageUrlInput.val('');
+        
+        // Reset to file mode
+        toggleInputMode('file');
         
         // Reset image input state
         updateImageInputState(false);
@@ -565,6 +697,7 @@ $(document).ready(function() {
         currentImage = null;
         originalImageData = null;
         $imageInput.val('');
+        $imageUrlInput.val('');
         updateImageInputState(false);
         updateProcessButtonState();
         showToast('Image removed', 'info');

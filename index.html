@@ -58,11 +58,35 @@
 
                 <div class="input-row">
                     <div class="image-input-section">
-                        <label for="imageInput" class="image-input-btn" id="imageInputLabel">
-                            <i class="fas fa-paperclip"></i>
-                            <span id="imageInputText">Attach Image</span>
-                        </label>
-                        <input type="file" id="imageInput" accept="image/*" hidden>
+                        <!-- Toggle between file upload and URL input -->
+                        <div class="image-input-toggle">
+                            <button class="toggle-btn active" id="fileToggleBtn" data-mode="file">
+                                <i class="fas fa-paperclip"></i>
+                                File
+                            </button>
+                            <button class="toggle-btn" id="urlToggleBtn" data-mode="url">
+                                <i class="fas fa-link"></i>
+                                URL
+                            </button>
+                        </div>
+                        
+                        <!-- File upload mode -->
+                        <div class="file-input-mode" id="fileInputMode">
+                            <label for="imageInput" class="image-input-btn" id="imageInputLabel">
+                                <i class="fas fa-paperclip"></i>
+                                <span id="imageInputText">Attach Image</span>
+                            </label>
+                            <input type="file" id="imageInput" accept="image/*" hidden>
+                        </div>
+                        
+                        <!-- URL input mode -->
+                        <div class="url-input-mode" id="urlInputMode" style="display: none;">
+                            <div class="url-input-container">
+                                <input type="url" id="imageUrlInput" placeholder="Paste image URL here and it will load automatically..." />
+                            </div>
+                        </div>
+                        
+                        <!-- Image thumbnail (shared) -->
                         <div class="image-thumbnail-container" id="imageThumbnailContainer" style="display: none;">
                             <div class="image-thumbnail">
                                 <img id="thumbnailImage" alt="Attached image">
@@ -86,7 +110,7 @@
                     </div>
                 </div>
                 <div class="input-info">
-                    <span class="format-info">Supported: JPG, PNG, GIF, WebP (Max: 10MB)</span>
+                    <span class="format-info">Supported: JPG, PNG, GIF, WebP (Max: 10MB) • File upload or URL</span>
                     <button id="resetBtn" class="reset-link">Reset</button>
                 </div>
             </div>

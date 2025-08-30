@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const mime = require('mime');
 
 const app = express();
@@ -42,9 +42,7 @@ app.post('/api/process-image', async (req, res) => {
         }
 
         // Initialize Gemini AI
-        const genAI = new GoogleGenAI({
-            apiKey: apiKey
-        });
+        const genAI = new GoogleGenerativeAI(apiKey);
 
         // Configuration for image generation
         const config = {

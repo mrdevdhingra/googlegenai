@@ -23,8 +23,8 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        // Import GoogleGenAI using require for better Vercel compatibility
-        const { GoogleGenAI } = require('@google/genai');
+        // Import GoogleGenerativeAI using require for better Vercel compatibility
+        const { GoogleGenerativeAI } = require('@google/generative-ai');
         
         const { apiKey, imageData, instructions } = req.body;
 
@@ -50,7 +50,7 @@ module.exports = async function handler(req, res) {
         }
 
         // Initialize Gemini AI
-        const genAI = new GoogleGenAI(apiKey);
+        const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
         // Convert base64 to buffer and get mime type

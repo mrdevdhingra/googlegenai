@@ -19,7 +19,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@google/genai": "^1.16.0",
+    "@google/generative-ai": "^0.21.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "mime": "^4.0.7",
